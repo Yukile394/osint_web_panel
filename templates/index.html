@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSINT X-RAY Panel</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🕵️ OSINT X-RAY PANEL</h1>
+        <p>IP, Discord, Domain, TC, Telefon, E-posta Sızıntı</p>
+
+        <div class="grid">
+            <div class="card">
+                <h2>🌐 IP Adresi</h2>
+                <input id="ipInput" placeholder="Örn: 8.8.8.8">
+                <button onclick="sorgula('ip')">Sorgula</button>
+                <pre id="ipResult"></pre>
+            </div>
+
+            <div class="card">
+                <h2>🎮 Discord ID</h2>
+                <input id="discordInput" placeholder="Örn: 123456789012345678">
+                <button onclick="sorgula('discord')">Sorgula</button>
+                <pre id="discordResult"></pre>
+            </div>
+
+            <div class="card">
+                <h2>🌍 Domain (WHOIS)</h2>
+                <input id="domainInput" placeholder="Örn: google.com">
+                <button onclick="sorgula('domain')">Sorgula</button>
+                <pre id="domainResult"></pre>
+            </div>
+
+            <div class="card">
+                <h2>🆔 TC Kimlik (Örnek)</h2>
+                <input id="tcAd" placeholder="Ad">
+                <input id="tcSoyad" placeholder="Soyad">
+                <input id="tcDogum" placeholder="Doğum Yılı (1990)">
+                <button onclick="sorgula('tc')">Sorgula</button>
+                <pre id="tcResult"></pre>
+            </div>
+
+            <div class="card">
+                <h2>📱 Telefon</h2>
+                <input id="telefonInput" placeholder="+905551234567">
+                <button onclick="sorgula('telefon')">Sorgula</button>
+                <pre id="telefonResult"></pre>
+            </div>
+
+            <div class="card">
+                <h2>📧 E-posta Sızıntı</h2>
+                <input id="emailInput" placeholder="ornek@mail.com">
+                <button onclick="sorgula('email')">Sorgula</button>
+                <pre id="emailResult"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function sorgula(tip) {
+            let input, url, data;
+            const resultMap = {
+                'ip': { id: 'ipResult', input: 'ipInput' },
+                'discord': { id: 'discordResult', input: 'discordInput' },
+                'domain': { id: 'domainResult', input: 'domainInput' },
+                'tc': { id: 'tcResult' },
+                'telefon': { id: 'telefonResult', input: 'telefonInput' },
+                'email': { id: 'emailResult', input: 'emailInput' }
+            };
+
+            const resultEl = document.getElementById(resultMap[tip].id);
+            resultEl.textContent = 'Taranıyor...';
+
+            if (tip === 'ip') {
+                data = { ip: document.getElementById('ipInput').value };
+            } else if (tip === 'discord') {
+                data = { discord_id: document.getElementById('discordInput').value };
+            } else if (tip === 'domain') {
+                data = { domain: document.getElementById('domainInput').value };
+            } else if (tip === 'tc') {
+                data = {
+                    ad: document.getElementById('tcAd').value,
+                    soyad: document.getElementById('tcSoyad').value,
+                    dogum_yili: document.getElementById('tcDogum').value || '1990'
+                };
+            } else if (tip === 'telefon') {
+                data = { telefon: document.getElementById('telefonInput').value };
+            } else if (tip === 'email') {
+                data = { email: document.getElementById('emailInput').value };
+            }
+
+            try {
+                const res = await fetch(`/api/${tip}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const json = await res.json();
+                resultEl.textContent = JSON.stringify(json, null, 2);
+            } catch (err) {
+                resultEl.textContent = 'Hata: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
