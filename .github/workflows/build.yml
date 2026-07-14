@@ -5,54 +5,46 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '0 12 * * *'  # Her gün saat 12:00'de otomatik çalışır
+    - cron: '0 12 * * *'
 
 jobs:
   osint-build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      # 1. Repoyu klonla
       - name: 📂 Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Python kurulumu
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 3. Bağımlılıkları yükle
       - name: 📦 Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. OSINT taramasını çalıştır (config.json'dan oku)
       - name: 🔍 Run OSINT Scan
         run: python osint_engine.py
 
-      # 5. Web panelini test et (Flask uygulamasını arka planda başlat)
       - name: 🌐 Start Web Panel
         run: |
           nohup python app.py &
           sleep 5
-          curl -s http://localhost:5000 | head -n 20
+          curl -s http://localhost:5000 | head -n 20 || echo "Web panel başlatılamadı"
 
-      # 6. Raporu JSON olarak kaydet
       - name: 💾 Save Report
         run: |
           mkdir -p reports
           cp osint_rapor.json reports/rapor_$(date +'%Y%m%d_%H%M%S').json
 
-      # 7. Raporu artefact olarak yayınla
       - name: 📤 Upload Artefact
         uses: actions/upload-artifact@v4
         with:
           name: osint-full-rapor
           path: reports/
 
-      # 8. Discord webhook ile bildirim gönder
       - name: 📨 Discord Notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -60,11 +52,12 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d '{"content":"✅ OSINT taraması tamamlandı! Rapor ektedir.","embeds":[{"title":"Detaylar","description":"'$(date)'","color":3066993}]}' \
+               -d '{"content":"✅ OSINT taraması tamamlandı!","embeds":[{"title":"Detaylar","description":"'"$(date)"'","color":3066993}]}' \
                $DISCORD_WEBHOOK
-          curl -F "file1=@reports/*.json" $DISCORD_WEBHOOK
+          for file in reports/*.json; do
+            curl -F "file=@$file" $DISCORD_WEBHOOK
+          done
 
-      # 9. Telegram bildirimi (opsiyonel)
       - name: 📨 Telegram Notification
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -76,9 +69,8 @@ jobs:
           done
           curl -s -F text="OSINT taraması tamamlandı!" "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}"
 
-      # 10. GitHub Pages'e yayınla (opsiyonel)
       - name: 📄 Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./templates
